@@ -1,0 +1,117 @@
+# Environment variables (contains sensitive tokens)
+.env
+*.env
+!.env.example
+
+# Docker volumes and runtime data
+docker-compose.override.yml
+.docker/
+volumes/
+
+# SSL certificates and keys (regenerate locally)
+*.crt
+*.key
+*.pem
+*.p12
+*.pfx
+cert.d/
+certificates/
+
+# Log files (exclude sample files)
+*.log
+!shared/samples/*.log
+!**/samples/*.log
+logs/
+*.log.*
+syslog-ng.conf
+
+# Backup files
+*.bak
+*.backup
+*.old
+*~
+.#*
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+*.tmp
+*.temp
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Docker development
+.dockerignore.local
+docker-compose.local.yml
+docker-compose.dev.local.yml
+
+# Node.js (if any solution uses Node tools)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python (if any scripts use Python) - IMPORTANT: Virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+.env/
+**/.venv/
+**/venv/
+**/.env/
+pip-log.txt
+pip-delete-this-directory.txt
+*.egg-info/
+dist/
+build/
+
+# Archive files
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.rar
+*.7z
+
+# Local development overrides
+local/
+local-*
+*local*
+dev-*
+test-*.tmp
+test-data/
+test-output/
+
+# Documentation builds
+_site/
+.sass-cache/
+.jekyll-cache/
+.jekyll-metadata
+
+# Security scanners and linting
+.trivy/
+.hadolint/
+.shellcheck/
