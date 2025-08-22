@@ -1,0 +1,10 @@
+api-token: ${AISIEM_LOGACCESS_WRITE_TOKEN}
+destination: ${AISIEM_SERVER}
+host: ${SYSLOG_HOST}
+ports:
+  - ${PORT1_PROTOCOL}-${PORT1_NUMBER}:
+      type: ${PORT1_TYPE}
+  - ${PORT2_PROTOCOL}-${PORT2_NUMBER}:
+      type: ${PORT2_TYPE}
+source-types:
+# DYNAMIC_SOURCES_PLACEHOLDER - This will be replaced by substitute-and-run.sh with all detected SOURCE* configurations

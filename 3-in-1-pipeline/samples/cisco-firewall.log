@@ -1,0 +1,1 @@
+<134>1 2025-08-01T13:47:39.000Z docker-desktop firewall4 12345 INTF-ALERT [exampleSDID@32473 iut="3" eventSource="cisco"] %ASA-4-313001: Built inbound TCP connection for faddr 10.20.30.40/12345 gaddr 192.168.1.1/80 laddr 172.16.0.2/443

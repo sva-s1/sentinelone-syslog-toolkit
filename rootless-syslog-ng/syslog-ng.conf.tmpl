@@ -1,0 +1,173 @@
+@version: 4.9
+@include "scl.conf"
+
+options {
+    threaded(yes);
+    chain_hostnames(off);
+    flush_lines(0);
+    use_dns(no);
+    use_fqdn(no);
+    keep_hostname(no);
+    keep_timestamp(no);
+    time_reopen(10);
+    use_uniqid(yes);
+    stats(level(3) freq(3600));
+};
+
+source s_network {
+    network(
+        transport("udp")
+        ip("0.0.0.0")
+        port(5514)
+        so_rcvbuf(425984)
+        log-iw-size(10000)
+        flags(no-parse)
+    );
+};
+
+rewrite r_strip_pri { subst("^<[0-9]{1,3}>", "", value("MESSAGE"), type("pcre")); };
+filter  f_zscaler   { message("^<[0-9]{1,3}>\\{\"datetime\""); };
+parser  p_syslog    { syslog-parser(); };
+
+# FortiGate identifier filter (prefer exact device name, then general substrings)
+filter  f_fortigate  {
+    message("devname=\"FortiGate-40F-PURPLE9\"") or
+    message("devname=\"FortiGate") or
+    message("logid=\"") or
+    message("type=\"traffic\"") or
+    message("subtype=\"forwarded\"");
+};
+
+# Exact device-name filter for priority routing
+filter f_fgt_device_exact {
+    message("devname=\"FortiGate-40F-PURPLE9\"");
+};
+
+destination d_stdout {
+    file("/dev/stdout" template("LOG ▶ $MESSAGE\n"));
+};
+
+destination d_sentinelone_zscaler {
+    http(
+        url("${S1_INGEST_URL}/services/collector/event?sourcetype=marketplace-zscalerinternetaccess-latest&dataSource.category=security&dataSource.name=Zscaler%20Internet%20Access&dataSource.vendor=Zscaler&metadata.version=1.0.0&metadata.product.vendor_name=Zscaler&metadata.product.name=ZIA&category_uid=4&category_name=Network%20Activity")
+        headers(
+            "Authorization: Bearer ${S1_WRITE_TOKEN}",
+            "Content-Type: application/json"
+        )
+        body("${MESSAGE}\n")
+        method("POST")
+        content-compression("gzip")
+        batch-lines(500)
+        batch-bytes(1M)
+        batch-timeout(1000)
+        retries(3)
+        workers(2)
+        time-reopen(60)
+        tls(peer-verify(no) ca-dir("/etc/ssl/certs"))
+    );
+};
+
+destination d_sentinelone_linux {
+    http(
+        url("${S1_INGEST_URL}/services/collector/raw?sourcetype=linuxSyslog&dataSource.category=security&dataSource.vendor=Linux&dataSource.name=System%20Logs&metadata.version=1.0.0&severity_id=6")
+        headers(
+            "Authorization: Bearer ${S1_WRITE_TOKEN}",
+            "Content-Type: text/plain"
+        )
+        body("<${PRI}>${ISODATE} ${HOST} ${MSGHDR}${MSG}")
+        method("POST")
+        content-compression("gzip")
+        batch-lines(1000)
+        batch-bytes(1M)
+        batch-timeout(2000)
+        retries(3)
+        workers(2)
+        time-reopen(60)
+        tls(peer-verify(no) ca-dir("/etc/ssl/certs"))
+    );
+};
+
+destination d_sentinelone_fortigate {
+    http(
+        url("${S1_INGEST_URL}/services/collector/raw?sourcetype=marketplace-fortinetfortigate-latest&dataSource.category=security&dataSource.name=FortiGate&dataSource.vendor=Fortinet&metadata.version=1.0.0&metadata.product.vendor_name=Fortinet&metadata.product.name=FortiGate&severity_id=99&category_uid=3&category_name=Network%20Activity")
+        headers(
+            "Authorization: Bearer ${S1_WRITE_TOKEN}",
+            "Content-Type: text/plain"
+        )
+        body("${MESSAGE}\n")
+        method("POST")
+        content-compression("gzip")
+        batch-lines(1)
+        batch-bytes(1M)
+        batch-timeout(100)
+        retries(3)
+        workers(2)
+        time-reopen(60)
+        tls(peer-verify(no) ca-dir("/etc/ssl/certs"))
+    );
+};
+
+destination d_sentinelone_fallback {
+    http(
+        url("${S1_INGEST_URL}/services/collector/raw?sourcetype=unmatched&dataSource.category=security")
+        headers(
+            "Authorization: Bearer ${S1_WRITE_TOKEN}",
+            "Content-Type: text/plain"
+        )
+        body("${MESSAGE}")
+        method("POST")
+        content-compression("gzip")
+        batch-lines(100)
+        batch-bytes(100K)
+        batch-timeout(5000)
+        retries(2)
+        workers(1)
+        time-reopen(60)
+        tls(peer-verify(no) ca-dir("/etc/ssl/certs"))
+    );
+};
+
+## Highest-priority path: exact FortiGate device name
+log {
+    source(s_network);
+    filter(f_fgt_device_exact);
+    destination(d_stdout);
+    destination(d_sentinelone_fortigate);
+    flags(final);
+};
+
+log {
+    source(s_network);
+    filter(f_zscaler);
+    rewrite(r_strip_pri);
+    destination(d_stdout);
+    destination(d_sentinelone_zscaler);
+    flags(final);
+};
+
+# IMPORTANT: Handle FortiGate BEFORE parsing and stop further processing.
+log {
+    source(s_network);
+    filter(f_fortigate);
+    destination(d_stdout);
+    destination(d_sentinelone_fortigate);
+    flags(final);
+};
+
+# All remaining messages can be parsed safely for PROGRAM, HOST, etc. This includes Linux.
+log {
+    source(s_network);
+    parser(p_syslog);
+    destination(d_stdout);
+
+    if (
+        match("sshd|systemd|kernel|cron|authpriv" value("PROGRAM")) or
+        match("pam_|sudo:|su:|sshd" value("MESSAGE")) or
+        match("CRON|systemd|kernel" value("PROGRAM"))
+    ) {
+        destination(d_sentinelone_linux);
+    }
+    else {
+        destination(d_sentinelone_fallback);
+    };
+};

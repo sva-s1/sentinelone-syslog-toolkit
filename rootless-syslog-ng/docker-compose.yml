@@ -1,0 +1,49 @@
+services:
+  syslog:
+    # Development/Testing mode: pulls pre-built image for quick testing
+    image: ghcr.io/sva-s1/syslog:latest
+    container_name: syslog
+    user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
+    ports:
+      - "${SYSLOG_PORT:-5514}:${SYSLOG_PORT:-5514}/udp"
+
+    # Persistent state & logs
+    volumes:
+      - syslog_data:/var/lib/syslog-ng
+      - syslog_logs:/var/log/syslog-ng
+
+    environment:
+      # Pass through all environment variables from .env
+      - S1_INGEST_URL=${S1_INGEST_URL:-https://ingest.us1.sentinelone.net}
+      - S1_WRITE_TOKEN=${S1_WRITE_TOKEN}
+      - SYSLOG_PORT=${SYSLOG_PORT:-5514}
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD-SHELL","pidof syslog-ng || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+        reservations:
+          memory: 128M
+          cpus: "0.25"
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  syslog_data:
+    driver: local
+  syslog_logs:
+    driver: local

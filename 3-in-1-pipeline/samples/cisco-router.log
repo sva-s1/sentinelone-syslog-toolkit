@@ -1,0 +1,1 @@
+<134>1 2025-08-01T13:47:39.000Z router01 ospf 23456 LINK-STATE [exampleSDID@32473 iut="2" eventSource="cisco"] %OSPF-5-ADJCHG: Process 1, Nbr 192.168.1.100 on GigabitEthernet0/1 from LOADING to FULL, Loading Done

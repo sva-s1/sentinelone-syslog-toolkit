@@ -1,0 +1,108 @@
+services:
+  config-generator:
+    # For development use
+    #build: ./config-generator
+    image: scalyr/syslog-collector-config-generator:1.1.5
+    env_file:
+      - .env
+    entrypoint: ["/substitute-and-run.sh"]
+    volumes:
+      # Only syslog.yaml (not all of the current directory) is needed in the container however
+      # file bind mounts do not propagate changes when the underlying file inode changes.
+      # (Inode changes / file swaps typically happen with text editors that use swap files)
+      - type: bind
+        source: .
+        target: /etc/syslog-collector
+        read_only: true
+      - type: bind
+        source: ./scripts/substitute-and-run.sh
+        target: /substitute-and-run.sh
+        read_only: true
+      - type: volume
+        source: agent-config
+        target: /out/etc/scalyr-agent-2
+      - type: volume
+        source: syslog-ng-config
+        target: /out/etc/syslog-ng
+      - type: volume
+        source: logrotate-config
+        target: /out/etc/logrotate.d
+      - type: volume
+        source: logrotate-script
+        target: /out/usr/local/sbin
+    environment:
+      INPUT: /etc/syslog-collector/config/syslog.yaml
+      AGENT_OUTPUT: /out/etc/scalyr-agent-2/agent.json
+      SYSLOG_OUTPUT: /out/etc/syslog-ng/syslog-ng.conf
+      LOGPATH: &syslog-ng-log-path /var/log/syslog-collector
+      SYSLOG_IMAGE: &syslog-ng-image balabit/syslog-ng:4.8.0
+      LOGROTATE_CONFIG_OUTPUT: /out/etc/logrotate.d/syslog-collector
+      LOGROTATE_SCRIPT_OUTPUT: /out/usr/local/sbin/logrotate.sh
+      VERSION: "syslog-collector-version:2.2.0"
+    healthcheck:
+      test: >
+        test -e /out/etc/scalyr-agent-2/agent.json -a \
+             -e /out/etc/syslog-ng/syslog-ng.conf -a \
+             -e /out/etc/logrotate.d/syslog-collector -a \
+             -e /out/usr/local/sbin/logrotate.sh
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+  scalyr-agent:
+    image: scalyr/scalyr-agent-docker-json:2.2.14
+    volumes:
+      - type: volume
+        source: agent-config
+        target: /etc/scalyr-agent-2
+        read_only: true
+        # Do not copy the /etc/scalyr-agent-2 contents from the image;
+        # agent.json gets overwritten after config-generator executes,
+        # not to mention the agent.d/ contents would remain unmodified.
+        volume:
+          nocopy: true
+      - type: volume
+        source: syslog-ng-logs
+        target: *syslog-ng-log-path
+        read_only: true
+    depends_on:
+      config-generator:
+        condition: service_healthy
+  syslog-ng:
+    # For development use
+    #build:
+    #  context: ./syslog-ng
+    #  args:
+    #    IMAGE: *syslog-ng-image
+    image: scalyr/syslog-collector-syslog:4.8.0.1
+    # Allow the container to open ports on the host's network interface,
+    # this avoids having to explicitly specify each port opened
+    network_mode: host
+    volumes:
+      - type: volume
+        source: syslog-ng-config
+        target: /etc/syslog-ng
+        read_only: true
+        # Do not copy the /etc/syslog-ng contents from the image;
+        # syslog-ng.conf gets overwritten after config-generator executes.
+        volume:
+          nocopy: true
+      - type: volume
+        source: syslog-ng-logs
+        target: *syslog-ng-log-path
+      - type: volume
+        source: logrotate-config
+        target: /etc/logrotate.d
+        read_only: true
+      - type: volume
+        source: logrotate-script
+        target: /usr/local/sbin
+        read_only: true
+    depends_on:
+      config-generator:
+        condition: service_healthy
+volumes:
+  agent-config:
+  logrotate-config:
+  logrotate-script:
+  syslog-ng-config:
+  syslog-ng-logs:

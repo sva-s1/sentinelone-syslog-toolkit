@@ -1,0 +1,24 @@
+# Configuration for this S1 Collector Agent. For help:
+#
+# https://community.sentinelone.com/s/topic/0TO69000000as2qGAA/sentinelone-collector
+
+services:
+  s1-collector:
+    image: scalyr/scalyr-agent-docker-json
+    container_name: s1-collector
+    restart: unless-stopped
+    environment:
+      [
+        "SCALYR_API_KEY=${AISIEM_LOGACCESS_WRITE_TOKEN}",
+        "SCALYR_SERVER=${AISIEM_SERVER}",
+      ]
+    ports: [514:514/udp, 601:601/tcp]
+    volumes: [.:/etc/scalyr-agent-2, /var/lib/docker/docker.sock]
+#
+# Note: To find your Docker socket path on macOS, run:
+# `docker info | grep "Docker Root Dir"` and append `/run/docker.sock` to the output.
+# For example, if the output is `/var/lib/docker`, then the socket path would be `/var/lib/docker/run/docker.sock`.
+
+# Note: To find your Docker socket path on Ubuntu, run:
+# `docker info | grep "Docker Root Dir"` and append `/docker.sock` to the output.
+# For example, if the output is `/run/docker.sock`, then the socket path would  be `/run/docker.sock`.

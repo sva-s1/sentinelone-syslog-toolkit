@@ -1,0 +1,9 @@
+# Multi-platform Dockerfile for Alpine with netcat (nc)
+# Supports both ARM64 (Apple Silicon) and AMD64 (Intel/GitHub Actions)
+FROM --platform=$BUILDPLATFORM alpine:latest
+
+# Install netcat-openbsd which works consistently across architectures
+RUN apk add --no-cache netcat-openbsd
+
+# Set default command
+CMD ["/bin/sh"]

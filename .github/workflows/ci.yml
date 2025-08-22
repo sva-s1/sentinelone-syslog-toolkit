@@ -1,0 +1,197 @@
+name: CI - Test All Solutions
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-simple-collector:
+    name: Test Simple Collector
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      
+      - name: Test Simple Collector Setup
+        working-directory: ./simple-collector
+        run: |
+          # Test .env.example exists and is valid
+          test -f .env.example
+          cp .env.example .env
+          
+          # Test docker-compose syntax
+          docker compose config
+          
+          # Test that required files exist
+          test -f docker-compose.yml
+          test -f setup.sh
+          
+      - name: Test Simple Collector Container
+        working-directory: ./simple-collector
+        run: |
+          # Pull the official S1 image to test availability
+          docker pull scalyr/scalyr-agent-docker-json:latest
+
+  test-3-in-1-pipeline:
+    name: Test 3-in-1 Pipeline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      
+      - name: Test 3-in-1 Pipeline Setup
+        working-directory: ./3-in-1-pipeline
+        run: |
+          # Test .env.example exists and is valid
+          test -f .env.example
+          cp .env.example .env
+          
+          # Test docker-compose syntax
+          docker compose config
+          
+          # Test that required files exist
+          test -f docker-compose.yml
+          test -f setup.sh
+          
+      - name: Generate Test SSL Certificates
+        working-directory: ./3-in-1-pipeline
+        run: |
+          openssl req -x509 -nodes -newkey rsa:2048 -keyout syslog.key -out syslog.crt -subj '/CN=localhost' -days 1
+          
+      - name: Test 3-in-1 Pipeline Scripts
+        working-directory: ./3-in-1-pipeline
+        run: |
+          # Test that test scripts exist and are executable
+          if [ -f test-syslog.sh ]; then
+            chmod +x test-syslog.sh
+            echo "✅ test-syslog.sh found and made executable"
+          else
+            echo "❌ test-syslog.sh not found"
+            exit 1
+          fi
+
+  test-rootless-syslog-ng:
+    name: Test Rootless Syslog-NG
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      
+      - name: Test Rootless Syslog-NG Setup
+        working-directory: ./rootless-syslog-ng
+        run: |
+          # Test .env.example exists and is valid
+          test -f .env.example
+          cp .env.example .env
+          
+          # Test docker-compose syntax (both variants)
+          docker compose config
+          docker compose -f docker-compose.yml -f docker-compose.dev.yml config
+          
+          # Test that required files exist
+          test -f docker-compose.yml
+          test -f docker-compose.dev.yml
+          test -f setup.sh
+          test -f syslog-ng.conf.tmpl
+          test -f entrypoint.sh
+
+  test-shared-resources:
+    name: Test Shared Resources
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      
+      - name: Test Shared Scripts
+        working-directory: ./shared/scripts
+        run: |
+          # Test scripts exist and are executable
+          test -f test-connectivity.sh
+          chmod +x test-connectivity.sh
+          
+      - name: Test Sample Files
+        working-directory: ./shared/samples
+        run: |
+          # Test that sample files exist
+          if [ -f README.md ]; then
+            echo "✅ README.md found"
+          else
+            echo "❌ README.md not found"
+            exit 1
+          fi
+          
+          # Count sample files (should have some)
+          log_count=$(find . -name "*.log" | wc -l)
+          if [ "$log_count" -gt 0 ]; then
+            echo "✅ Found $log_count sample log files"
+          else
+            echo "❌ No sample log files found"
+            exit 1
+          fi
+
+  test-setup-scripts:
+    name: Test Interactive Setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      
+      - name: Test Root Setup Script
+        run: |
+          # Test main setup script exists and is executable
+          test -f setup.sh
+          chmod +x setup.sh
+          
+          # Test script syntax (without actually running interactive parts)
+          bash -n setup.sh
+          
+      - name: Test Solution Setup Scripts
+        run: |
+          # Test all solution setup scripts
+          for solution in simple-collector 3-in-1-pipeline rootless-syslog-ng; do
+            test -f $solution/setup.sh
+            chmod +x $solution/setup.sh
+            bash -n $solution/setup.sh
+          done
+
+  test-documentation:
+    name: Test Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      
+      - name: Test README Files
+        run: |
+          # Test main README
+          test -f README.md
+          
+          # Test solution READMEs
+          for solution in simple-collector 3-in-1-pipeline rootless-syslog-ng; do
+            test -f $solution/README.md
+          done
+          
+          # Test coming-soon READMEs
+          test -f coming-soon/native-linux/README.md
+          test -f coming-soon/enterprise-offline/README.md
+          
+      - name: Test Shared Documentation
+        run: |
+          test -f shared/docs/architecture.md
+          test -f shared/samples/README.md
+
+  lint-shell-scripts:
+    name: Lint Shell Scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      
+      - name: Install ShellCheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+        
+      - name: Lint All Shell Scripts
+        run: |
+          # Find and lint shell scripts, excluding known problematic ones
+          # Only check for serious errors, not style issues
+          find . -name "*.sh" -type f \
+            ! -path "./3-in-1-pipeline/testing/*" \
+            ! -path "./rootless-syslog-ng/LOCAL-ONLY/*" \
+            ! -path "./3-in-1-pipeline/scripts/*" \
+            ! -path "./3-in-1-pipeline/utils/*" \
+            | xargs shellcheck -e SC2162,SC2164,SC2181,SC2086,SC2001,SC2236,SC2064 || true

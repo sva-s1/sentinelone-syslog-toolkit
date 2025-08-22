@@ -1,0 +1,21 @@
+# Simple Collector - SentinelOne Syslog Solution
+# For help: https://community.sentinelone.com/s/topic/0TO69000000as2qGAA/sentinelone-collector
+
+services:
+  simple-collector:
+    image: scalyr/scalyr-agent-docker-json
+    container_name: simple-collector
+    restart: unless-stopped
+    environment:
+      - "SCALYR_API_KEY=${S1_API_TOKEN}"
+      - "SCALYR_SERVER=${S1_INGEST_URL}"
+    ports:
+      - "${SIMPLE_UDP_PORT:-514}:514/udp"
+      - "${SIMPLE_TCP_PORT:-601}:601/tcp"
+    volumes:
+      - .:/etc/scalyr-agent-2
+      - /var/run/docker.sock:/var/run/docker.sock
+
+# Note: The Docker socket path may vary by system:
+# - Linux: Usually /var/run/docker.sock
+# - macOS: Check with `docker info | grep "Docker Root Dir"`

@@ -1,0 +1,32 @@
+version: 2
+updates:
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "sva-s1"
+    assignees:
+      - "sva-s1"
+
+  # Docker (for rootless-syslog-ng solution)
+  - package-ecosystem: "docker"
+    directory: "/rootless-syslog-ng/Dockerfiles/syslog-ng-rootless"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "docker"
+      include: "scope"
+
+  - package-ecosystem: "docker"
+    directory: "/rootless-syslog-ng/Dockerfiles/alpine-nc"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "docker"
+      include: "scope"

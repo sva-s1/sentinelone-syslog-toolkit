@@ -1,0 +1,17 @@
+# Production override for custom syslog-ng configuration
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+services:
+  syslog:
+    # Production mode: builds from local source with custom config
+    build:
+      context: .
+      dockerfile: Dockerfiles/syslog-ng-rootless/Dockerfile
+    # Remove image directive to force build
+    image: null
+    
+    volumes:
+      # Mount config template for live editing during development
+      - ./syslog-ng.conf.tmpl:/etc/syslog-ng/syslog-ng.conf.tmpl:ro
+      # Inherit other volumes from base compose file
+      - syslog_data:/var/lib/syslog-ng
+      - syslog_logs:/var/log/syslog-ng

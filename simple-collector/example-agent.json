@@ -1,0 +1,11 @@
+{
+  "monitors": [
+    {
+      "module": "scalyr_agent.builtin_monitors.syslog_monitor",
+      "protocols": "tcp:601, udp:514",
+      "accept_remote_connections": true,
+      "message_log": "palo.log",
+      "parser": "marketplace-paloaltonetworksfirewall-latest"
+    }
+  ]
+}

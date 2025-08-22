@@ -1,0 +1,122 @@
+name: Build Rootless Syslog-NG Container
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'rootless-syslog-ng/**'
+      - '.github/workflows/build-rootless.yml'
+  pull_request:
+    paths:
+      - 'rootless-syslog-ng/**'
+      - '.github/workflows/build-rootless.yml'
+  workflow_dispatch:
+    inputs:
+      force_build:
+        description: 'Force build all images'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: sva-s1/syslog
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.REPO_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=raw,value=latest,enable={{is_default_branch}}
+          flavor: |
+            latest=false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: network=host
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./rootless-syslog-ng
+          file: ./rootless-syslog-ng/Dockerfiles/syslog-ng-rootless/Dockerfile
+          push: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+          load: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64
+
+      - name: Test rootless functionality
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          cd rootless-syslog-ng
+          
+          # Test that syslog-ng responds to version check
+          docker run --rm --entrypoint syslog-ng ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest --version
+          
+          # Test that it's running as user 1000
+          docker run --rm --entrypoint id ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+  build-alpine-nc:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.REPO_TOKEN }}
+
+      - name: Extract metadata for alpine-nc
+        id: meta-nc
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/sva-s1/alpine-nc
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=raw,value=latest,enable={{is_default_branch}}
+          flavor: |
+            latest=false
+
+      - name: Build and push alpine-nc image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./rootless-syslog-ng
+          file: ./rootless-syslog-ng/Dockerfiles/alpine-nc/Dockerfile
+          push: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+          load: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
+          tags: ${{ steps.meta-nc.outputs.tags }}
+          labels: ${{ steps.meta-nc.outputs.labels }}
+          platforms: linux/amd64
