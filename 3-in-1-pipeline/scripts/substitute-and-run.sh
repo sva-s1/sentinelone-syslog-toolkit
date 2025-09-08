@@ -24,7 +24,7 @@ validate_api_token() {
     response=$(curl -s -w "%{http_code}" -o /dev/null \
         -H "Authorization: Bearer $api_token" \
         -H "Content-Type: application/json" \
-        "$server_url/api/v1/addEvents" \
+        "$server_url/api/addEvents" \
         -d '[]' \
         --connect-timeout 10 \
         --max-time 30)
