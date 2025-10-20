@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM balabit/syslog-ng:4.9.0
+FROM --platform=$BUILDPLATFORM balabit/syslog-ng:4.10.2
 LABEL oorg.opencontainers.image.source = "https://github.com/sva-s1/sentinelone-syslog-toolkit"
 
 RUN set -eux; \
