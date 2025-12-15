@@ -3,6 +3,9 @@
 **Quick Start:**
 
 ```bash
+cd /etc
+sudo mkdir sentinelone-syslog-toolkit
+sudo chown $USER:$GROUP sentinelone-syslog-toolkit
 git clone https://github.com/sva-s1/sentinelone-syslog-toolkit.git
 cd sentinelone-syslog-toolkit
 bash setup.sh
