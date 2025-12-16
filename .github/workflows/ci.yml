@@ -11,7 +11,7 @@ jobs:
     name: Test Simple Collector
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       
       - name: Test Simple Collector Setup
         working-directory: ./simple-collector
@@ -37,7 +37,7 @@ jobs:
     name: Test 3-in-1 Pipeline
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       
       - name: Test 3-in-1 Pipeline Setup
         working-directory: ./3-in-1-pipeline
@@ -74,7 +74,7 @@ jobs:
     name: Test Rootless Syslog-NG
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       
       - name: Test Rootless Syslog-NG Setup
         working-directory: ./rootless-syslog-ng
@@ -98,7 +98,7 @@ jobs:
     name: Test Shared Resources
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       
       - name: Test Shared Scripts
         working-directory: ./shared/scripts
@@ -131,7 +131,7 @@ jobs:
     name: Test Interactive Setup
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       
       - name: Test Root Setup Script
         run: |
@@ -155,7 +155,7 @@ jobs:
     name: Test Documentation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       
       - name: Test README Files
         run: |
@@ -180,7 +180,7 @@ jobs:
     name: Lint Shell Scripts
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       
       - name: Install ShellCheck
         run: sudo apt-get update && sudo apt-get install -y shellcheck
