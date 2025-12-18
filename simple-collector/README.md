@@ -77,11 +77,22 @@ First, you need to get the project files onto your machine.
 
 You can either:
 
-- **Download the ZIP file:** Go to the GitHub repository ([https://github.com/sva-s1/s1-collector-syslog](https://github.com/sva-s1/s1-collector-syslog)) and click the green "Code" button, then "Download ZIP". Unzip the file to a location on your computer.
+- **Download the ZIP file:** Go to the GitHub repository [https://github.com/sva-s1/sentinelone-syslog-toolkit](https://github.com/sva-s1/sentinelone-syslog-toolkit) and click the green "Code" button, then "Download ZIP". Unzip the file to a location on your computer.
+
+> [!NOTE]
+> This repo is undergoing changnes, I just updated the clone reference which grabs the entire project but you only need the simple-collector folder portion; eventually, I pull these apart so that won't be needed.
+
 - **Use Git Clone (if you have Git installed):**
   ```bash
-  git clone https://github.com/sva-s1/s1-collector-syslog.git
-  cd s1-collector-syslog
+  git clone --no-checkout --depth 1 https://github.com/sva-s1/sentinelone-syslog-toolkit
+  cd sentinelone-syslog-toolkit
+
+  # 2. Tell Git to only track that specific folder
+  git sparse-checkout init --cone
+  git sparse-checkout set simple-collector
+
+  # 3. Pull the files
+  git checkout
   ```
   If you don't have Git installed, you can download it from [https://git-scm.com/downloads](https://git-scm.com/downloads).
 
